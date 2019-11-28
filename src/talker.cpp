@@ -6,7 +6,7 @@
 #include <sstream>
 
 #define DESIRED_DEPTH 15.00
-#define KP 0.3
+#define KP -0.3
 
 float depth;
 float angle = 0.0;
@@ -21,10 +21,11 @@ void chatterCallback(const sensor_msgs::FluidPressure& msg)
         ROS_INFO("And angle is : [%f]", angle);
 }
 
-int error()
+float error()
 {
-    int error = DESIRED_DEPTH - depth;
-    return KP * error;
+    float error = DESIRED_DEPTH - depth;
+    float result_error = KP * error;
+    return abs(result_error) > 0.6 ? 0.6 : result_error;
 }
 
 int main(int argc, char **argv)
@@ -42,8 +43,6 @@ int main(int argc, char **argv)
 
 	ros::Rate loop_rate(10);
 
-	float Kp = 0.3;
-
 	while (ros::ok())
 	{
             //CALCULATE ERROR
@@ -52,7 +51,7 @@ int main(int argc, char **argv)
             //MSG AND PUBLISH
             uuv_gazebo_ros_plugins_msgs::FloatStamped msg;
 
-            msg.data = 0.3;
+            msg.data = angle;
 
             chatter_pub1.publish(msg); 
             chatter_pub2.publish(msg); 
