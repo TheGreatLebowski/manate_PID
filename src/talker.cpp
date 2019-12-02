@@ -8,9 +8,6 @@
 #include <sstream>
 
 #define DESIRED_DEPTH 15.00
-#define KP -0.3
-#define KI 0.5
-#define KD 0.4
 #define MAXIMUM_ANGLE 0.6
 #define MINIMUM_ANGLE -0.6
 #define epsi 0.01
@@ -18,6 +15,22 @@
 
 float depth;
 float angle = 0.0;
+float KP, KI, KD;
+
+
+void read_file(std::string filename)
+{
+    std::ifstream infile(filename);
+    if (!infile)
+    {
+        ROS_INFO("Can't open the file %s", filename.c_str());
+        exit(1);
+    }
+    infile >> KP >> KI >> KD;
+    ROS_INFO("KP = %f, KI = %f, KD = %f", KP, KI, KD);
+    infile.close();
+
+}
 
 void chatterCallback(const sensor_msgs::FluidPressure& msg)
 {
@@ -32,12 +45,18 @@ void chatterCallback(const sensor_msgs::FluidPressure& msg)
 float output(float result_error)
 {
     if (abs(result_error) > MAXIMUM_ANGLE)
-        return result_error > 0 ? MAXIMUM_ANGLE : MINIMUM_ANGLE * -1;
+        return result_error > 0 ? MAXIMUM_ANGLE : MINIMUM_ANGLE;
     return result_error;
 }
 
 int main(int argc, char **argv)
 {
+    read_file("pid.conf");
+    
+    std::ofstream file;
+    file.open("depth.csv", std::ios_base::app);
+    file << "TIME,DEPTH"<< std::endl;
+
     ros::init(argc, argv, "talker");
 
     ros::NodeHandle n;
@@ -57,8 +76,12 @@ int main(int argc, char **argv)
     float error = 0.0;
     float derivative = 0.0;
     
+
+    float time = 0.0;
     while (ros::ok())
     {
+        file << time << "," << depth << std::endl;
+        time += 0.01;
         //CALCULATE ERROR
         error = DESIRED_DEPTH - depth;
 
@@ -67,7 +90,7 @@ int main(int argc, char **argv)
 
         derivative = (error - error_prior) / dt;
 
-        angle = KP * error + KI * integral + KI * derivative;
+        angle = KP * error + KI * integral + KD * derivative;
 
         error_prior = error;
 
@@ -77,10 +100,12 @@ int main(int argc, char **argv)
         msg.data = output(angle); //If the angle is to big, reduce it
 
         chatter_pub1.publish(msg); 
-        chatter_pub2.publish(msg); 
+        chatter_pub2.publish(msg);
 
         ros::spinOnce();
-        loop_rate.sleep();
+        //loop_rate.sleep();
+        ros::Duration(0.01).sleep();
     }
+    file.close();
     return 0;
 }
