@@ -12,6 +12,9 @@
 #define KI 0.5
 #define KD 0.4
 #define MAXIMUM_ANGLE 0.6
+#define MINIMUM_ANGLE -0.6
+#define epsi 0.01
+#define dt 0.01
 
 float depth;
 float angle = 0.0;
@@ -29,7 +32,7 @@ void chatterCallback(const sensor_msgs::FluidPressure& msg)
 float output(float result_error)
 {
     if (abs(result_error) > MAXIMUM_ANGLE)
-        return MAXIMUM_ANGLE;
+        return result_error > 0 ? MAXIMUM_ANGLE : MINIMUM_ANGLE * -1;
     return result_error;
 }
 
@@ -49,21 +52,22 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(10);
 
 
+    static float error_prior = 0.0;
+    static float integral = 0.0;
     float error = 0.0;
-    float error_prior = 0.0;
-    float integral = 0.0;
     float derivative = 0.0;
-    int iteration_time = 0.1;
+    
     while (ros::ok())
     {
         //CALCULATE ERROR
         error = DESIRED_DEPTH - depth;
 
-        integral = integral + (error * iteration_time);
+        if (abs(error) > epsi)
+            integral += error * dt;
 
-        derivative = (error - error_prior) / iteration_time;
+        derivative = (error - error_prior) / dt;
 
-        angle = KP * error + KI * integral;
+        angle = KP * error + KI * integral + KI * derivative;
 
         error_prior = error;
 
