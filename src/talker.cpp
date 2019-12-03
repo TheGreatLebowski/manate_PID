@@ -10,48 +10,21 @@ float depth;
 float angle = 0.0;
 float KP, KI, KD;
 
-
-void read_file(std::string filename)
-{
-    std::ifstream infile(filename);
-    if (!infile)
-    {
-        ROS_INFO("Can't open the file %s", filename.c_str());
-        exit(1);
-    }
-    infile >> KP >> KI >> KD;
-    ROS_INFO("KP = %f, KI = %f, KD = %f", KP, KI, KD);
-    infile.close();
-
-}
+PID fins = PID(15, -0.6, 0.6, "pid.conf", "depth.csv");
 
 void chatterCallback(const sensor_msgs::FluidPressure& msg)
 {
     float pressure = msg.fluid_pressure;
     //Calcul for depth
-    depth = (pressure - 101.325) / 9.80638;
+    fins.set_actual_value((pressure - 101.325) / 9.80638);
     //Display results
-    ROS_INFO("Depth is: %f, desired depth is %f", depth, DESIRED_DEPTH);
-    ROS_INFO("And angle is : [%f]", angle);
-}
-
-float output(float result_error)
-{
-    if (abs(result_error) > MAXIMUM_ANGLE)
-        return result_error > 0 ? MAXIMUM_ANGLE : MINIMUM_ANGLE;
-    return result_error;
+    ROS_INFO("Depth is: %f", fins.get_actual_value());
+    ROS_INFO("And angle is : [%f]", fins.get_output());
 }
 
 int main(int argc, char **argv)
 {
-    PID fins = PID(15, -0.6, 0.6, "pid.conf");
-    ROS_INFO("%f", fins.get_integral());
-    read_file("pid.conf");
     
-    std::ofstream file;
-    file.open("depth.csv", std::ios_base::app);
-    file << "TIME,DEPTH"<< std::endl;
-
     ros::init(argc, argv, "talker");
 
     ros::NodeHandle n;
@@ -65,34 +38,19 @@ int main(int argc, char **argv)
 
     ros::Rate loop_rate(10);
 
-
-    static float error_prior = 0.0;
-    static float integral = 0.0;
-    float error = 0.0;
-    float derivative = 0.0;
-    
-
     float time = 0.0;
     while (ros::ok())
     {
-        file << time << "," << depth << std::endl;
+        fins.publish_file(time);
         time += 0.01;
+
         //CALCULATE ERROR
-        error = DESIRED_DEPTH - depth;
-
-        if (abs(error) > epsi)
-            integral += error * dt;
-
-        derivative = (error - error_prior) / dt;
-
-        angle = KP * error + KI * integral + KD * derivative;
-
-        error_prior = error;
+        fins.PID_calcul();
 
         //MSG AND PUBLISH
         uuv_gazebo_ros_plugins_msgs::FloatStamped msg; //Creation of msg
 
-        msg.data = output(angle); //If the angle is to big, reduce it
+        msg.data = fins.limit(); //If the angle is to big, reduce it
 
         chatter_pub1.publish(msg); 
         chatter_pub2.publish(msg);
@@ -101,6 +59,5 @@ int main(int argc, char **argv)
         //loop_rate.sleep();
         ros::Duration(0.01).sleep();
     }
-    file.close();
     return 0;
 }
