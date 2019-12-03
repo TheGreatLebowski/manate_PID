@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "uuv_gazebo_ros_plugins_msgs/FloatStamped.h"
@@ -10,9 +12,12 @@
 class PID
 {
     public:
-        PID(float desired_value, float min, float max, std::string conf_file, std::string csv_file)
+        template<typename ...T>
+        PID(float desired_value, float min, float max, std::string conf_file,
+                std::string csv_file, std::string file_header, 
+                std::string subscribe, T&... args)
             :desired_value_{desired_value}, min_{min}, max_{max}
-            ,conf_file_{conf_file}
+            ,conf_file_{conf_file}, subscribe_{subscribe}, adv_{args ...}
         {
             actual_value_ = 0.0;
             error_ = 0.0;
@@ -21,13 +26,11 @@ class PID
             derivative_ = 0.0;
             read_file(conf_file_, KP_, KI_, KD_);
             of_file_.open(csv_file, std::ios_base::app);
-            of_file_ << "TIME,DEPTH" << std::endl;
+            of_file_ << file_header << std::endl;
+            
         };
 
-        /*~PID()
-        {
-            of_file_.close();
-        };*/
+        //TODO Destructor
 
         void read_file(std::string filename, float& KP, float& KI, float& KD)
         {
@@ -77,11 +80,27 @@ class PID
             return output_;
         }
 
+        std::string get_subscribe()
+        {
+            return subscribe_;
+        }
+
+        void publish(ros::NodeHandle n, auto msg)
+        {
+            for (int i = 0; i < adv_.size(); ++i)
+            {
+                ros::Publisher chatter_pub = n.advertise<uuv_gazebo_ros_plugins_msgs::FloatStamped>(adv_[i], 1000);
+                chatter_pub.publish(msg);
+            }
+        }
+
     private:
+        //Parameters of constructor
         float KP_, KI_, KD_;
         float desired_value_;
         float min_, max_;
         std::string conf_file_;
+        std::string subscribe_;
 
         std::ofstream of_file_;
         float actual_value_;
@@ -90,4 +109,5 @@ class PID
         float error_;
         float derivative_;
         float output_;
+        std::vector<std::string> adv_;
 };

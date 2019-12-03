@@ -1,16 +1,8 @@
 #include "talker.hpp"
 
-#define DESIRED_DEPTH 15.00
-#define MAXIMUM_ANGLE 0.6
-#define MINIMUM_ANGLE -0.6
-#define epsi 0.01
-#define dt 0.01
-
-float depth;
-float angle = 0.0;
-float KP, KI, KD;
-
-PID fins = PID(15, -0.6, 0.6, "pid.conf", "depth.csv");
+PID fins = PID(15, -0.6, 0.6, "pid.conf", "depth.csv", "TIME,DEPTH", 
+        "/submarine/pressure", "/submarine/fins/0/input",
+        "/submarine/fins/1/input");
 
 void chatterCallback(const sensor_msgs::FluidPressure& msg)
 {
@@ -23,25 +15,20 @@ void chatterCallback(const sensor_msgs::FluidPressure& msg)
 }
 
 int main(int argc, char **argv)
-{
-    
+{    
     ros::init(argc, argv, "talker");
 
     ros::NodeHandle n;
 
-    //PUBLISHERS
-    ros::Publisher chatter_pub1 = n.advertise<uuv_gazebo_ros_plugins_msgs::FloatStamped>("/submarine/fins/0/input", 1000);
-    ros::Publisher chatter_pub2 = n.advertise<uuv_gazebo_ros_plugins_msgs::FloatStamped>("/submarine/fins/1/input", 1000);
-
     //SUBSCRIBER
-    ros::Subscriber sub = n.subscribe("/submarine/pressure", 1000, chatterCallback);
+    ros::Subscriber sub = n.subscribe(fins.get_subscribe(), 1000, chatterCallback);
 
     ros::Rate loop_rate(10);
-
     float time = 0.0;
     while (ros::ok())
     {
         fins.publish_file(time);
+    
         time += 0.01;
 
         //CALCULATE ERROR
@@ -52,10 +39,10 @@ int main(int argc, char **argv)
 
         msg.data = fins.limit(); //If the angle is to big, reduce it
 
-        chatter_pub1.publish(msg); 
-        chatter_pub2.publish(msg);
+        fins.publish(n, msg);
 
         ros::spinOnce();
+       
         //loop_rate.sleep();
         ros::Duration(0.01).sleep();
     }
