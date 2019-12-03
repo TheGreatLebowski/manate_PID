@@ -1,11 +1,4 @@
-#include "ros/ros.h"
-#include "std_msgs/String.h"
-#include "uuv_gazebo_ros_plugins_msgs/FloatStamped.h"
-#include "sensor_msgs/FluidPressure.h"
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
+#include "talker.hpp"
 
 #define DESIRED_DEPTH 15.00
 #define MAXIMUM_ANGLE 0.6
@@ -51,6 +44,8 @@ float output(float result_error)
 
 int main(int argc, char **argv)
 {
+    PID fins = PID(15, -0.6, 0.6, "pid.conf");
+    ROS_INFO("%f", fins.get_integral());
     read_file("pid.conf");
     
     std::ofstream file;
