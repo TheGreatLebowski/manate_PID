@@ -8,16 +8,19 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <typeinfo>
 
 class PID
 {
     public:
+        PID();
+
         template<typename ...T>
-        PID(float desired_value, float min, float max, std::string conf_file,
-                std::string csv_file, std::string file_header, 
-                std::string subscribe, T&... args)
+            PID(ros::NodeHandle n, float desired_value, float min, float max, std::string conf_file,
+                    std::string csv_file, std::string file_header, 
+                    std::string subscribe, T&... args)
             :desired_value_{desired_value}, min_{min}, max_{max}
-            ,conf_file_{conf_file}, subscribe_{subscribe}, adv_{args ...}
+                ,conf_file_{conf_file}, subscribe_{subscribe}, adv_{args ...}
         {
             actual_value_ = 0.0;
             error_ = 0.0;
@@ -27,7 +30,14 @@ class PID
             read_file(conf_file_, KP_, KI_, KD_);
             of_file_.open(csv_file, std::ios_base::app);
             of_file_ << file_header << std::endl;
-            
+
+            for (int i = 0; i < adv_.size(); ++i)
+                pub_.push_back(n.advertise<uuv_gazebo_ros_plugins_msgs::FloatStamped>(adv_[i], 1000));
+
+            //Display PID values
+            std::cout << "KP = " << KP_;
+            std::cout << ", KI = " << KI_;
+            std::cout << ", and KD = " << KD_ << std::endl;
         };
 
         //TODO Destructor
@@ -37,7 +47,7 @@ class PID
             std::ifstream infile(filename);
             if (!infile)
             {
-                ROS_INFO("Can't open the file !!! %s", filename.c_str());
+                ROS_INFO("Can't open the file %s", filename.c_str());
                 exit(1);
             }
             infile >> KP >> KI >> KD;
@@ -85,13 +95,18 @@ class PID
             return subscribe_;
         }
 
-        void publish(ros::NodeHandle n, auto msg)
+        void publish(auto msg)
         {
             for (int i = 0; i < adv_.size(); ++i)
-            {
-                ros::Publisher chatter_pub = n.advertise<uuv_gazebo_ros_plugins_msgs::FloatStamped>(adv_[i], 1000);
-                chatter_pub.publish(msg);
-            }
+                pub_[i].publish(msg);
+        }
+
+        void info()
+        {
+            std::cout << "Actual value is " << actual_value_;
+            std::cout << " and searching to reach " << desired_value_ << std::endl;
+            std::cout << "Output is " << output_ << std::endl;
+            std::cout << "---------------------------------------------------" << std::endl;
         }
 
     private:
@@ -110,4 +125,5 @@ class PID
         float derivative_;
         float output_;
         std::vector<std::string> adv_;
+        std::vector<ros::Publisher> pub_;
 };
