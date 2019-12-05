@@ -4,17 +4,47 @@ float pressure;
 
 void chatterCallback(const sensor_msgs::FluidPressure& msg)
 {
-    pressure = msg.fluid_pressure;
-    //Calcul for depth
+    pressure = msg.fluid_pressure;//Add the fluid_pressure in PID object
 }
 
 int main(int argc, char **argv)
-{   
+{
+
     ros::init(argc, argv, "talker");
 
     ros::NodeHandle n;
 
-    PID fins = PID(n, 15, -0.6, 0.6, "pid.conf", "depth.csv", "TIME,DEPTH", "/submarine/pressure", "/submarine/fins/0/input", "/submarine/fins/1/input");
+    float desired_value = atof(argv[1]);
+    std::cout << "Desired value is "<< desired_value << std::endl;
+
+    float min = atof(argv[2]);
+    std::cout << "Minimum value is " << min << std::endl;
+
+    float max = atof(argv[3]);
+    std::cout << "Maximum value is " << max << std::endl;
+
+    std::string conf_file = argv[4];
+    std::cout << "Config file is " << conf_file << std::endl;
+
+    std::string of_file = argv[5];
+    std::cout << "Output file is " << of_file << std::endl;
+
+    std::string file_header = argv[6];
+    std::cout << "The header of the output file is " << file_header << std::endl;
+
+    std::string subscribe = argv[7];
+    std::cout << "The node you are subscribing is " << subscribe << std::endl;
+
+    std::vector <std::string> pub;
+
+    for (size_t i = 8; i < argc; i++)
+    {
+      pub.push_back(argv[i]);
+    }
+
+    PID fins = PID(n, desired_value, min, max,
+      conf_file, of_file, file_header, subscribe,
+      pub);
 
     //SUBSCRIBER
     ros::Subscriber sub = n.subscribe(fins.get_subscribe(), 1000, chatterCallback);
@@ -24,10 +54,10 @@ int main(int argc, char **argv)
 
     while (ros::ok())
     {
-        fins.set_actual_value((pressure - 101.325) / 9.80638);
-        
+        fins.set_actual_value((pressure - 101.325) / 9.80638);//Add function in PID()
+
         fins.publish_file(time);
-    
+
         time += 0.01;
 
         //CALCULATE ERROR
@@ -37,13 +67,13 @@ int main(int argc, char **argv)
         uuv_gazebo_ros_plugins_msgs::FloatStamped msg; //Creation of msg
 
         msg.data = fins.limit(); //If the angle is to big, reduce it
-    
+
         fins.publish(msg);
 
         fins.info();
 
         ros::spinOnce();
-       
+
         //loop_rate.sleep();
         ros::Duration(0.01).sleep();
     }

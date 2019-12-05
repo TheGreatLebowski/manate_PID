@@ -10,6 +10,16 @@
 #include <sstream>
 #include <typeinfo>
 
+#include <stdio.h>  /* defines FILENAME_MAX */
+// #define WINDOWS  /* uncomment this line to use it for windows.*/
+#ifdef WINDOWS
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
+
 class PID
 {
     public:
@@ -17,10 +27,10 @@ class PID
 
         template<typename ...T>
             PID(ros::NodeHandle n, float desired_value, float min, float max, std::string conf_file,
-                    std::string csv_file, std::string file_header, 
-                    std::string subscribe, T&... args)
+                    std::string csv_file, std::string file_header,
+                    std::string subscribe, std::vector<std::string> pub)
             :desired_value_{desired_value}, min_{min}, max_{max}
-                ,conf_file_{conf_file}, subscribe_{subscribe}, adv_{args ...}
+                ,conf_file_{conf_file}, subscribe_{subscribe}, adv_{pub}
         {
             actual_value_ = 0.0;
             error_ = 0.0;
@@ -45,8 +55,13 @@ class PID
         void read_file(std::string filename, float& KP, float& KI, float& KD)
         {
             std::ifstream infile(filename);
+            char buff[FILENAME_MAX];
+            GetCurrentDir( buff, FILENAME_MAX );
+            std::string current_working_dir(buff);
+            ROS_INFO("Can't open the file %s", current_working_dir.c_str());
             if (!infile)
             {
+                //ROS_INFO(current_working_dir);
                 ROS_INFO("Can't open the file %s", filename.c_str());
                 exit(1);
             }
