@@ -1,5 +1,5 @@
 <launch>
     <node pkg="publisher" name="talker" type="talker" output="screen"
-    args="15 -0.6 0.6 ../catkin/src/publisher/pid.conf ../catkin/src/publisher/depth.csv
+    args="248.4207 -0.6 0.6 ../catkin/src/publisher/pid.conf ../catkin/src/publisher/depth.csv
     TIME,DEPTH /submarine/pressure /submarine/fins/0/input /submarine/fins/1/input"/>
 </launch >

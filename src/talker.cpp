@@ -17,7 +17,6 @@ int main(int argc, char **argv)
     std::string conf_file, of_file, file_header, subscribe;
     std::vector <std::string> pub;
 
-
     try{
         desired_value = atof(argv[1]);
         std::cout << "Desired value is "<< desired_value << std::endl;
@@ -63,7 +62,7 @@ int main(int argc, char **argv)
 
     while (ros::ok())
     {
-        fins.set_actual_value((pressure - 101.325) / 9.80638);//Add function in PID()
+        fins.set_actual_value(pressure);
 
         fins.publish_file(time);
 
