@@ -9,42 +9,51 @@ void chatterCallback(const sensor_msgs::FluidPressure& msg)
 
 int main(int argc, char **argv)
 {
-
     ros::init(argc, argv, "talker");
 
     ros::NodeHandle n;
 
-    float desired_value = atof(argv[1]);
-    std::cout << "Desired value is "<< desired_value << std::endl;
-
-    float min = atof(argv[2]);
-    std::cout << "Minimum value is " << min << std::endl;
-
-    float max = atof(argv[3]);
-    std::cout << "Maximum value is " << max << std::endl;
-
-    std::string conf_file = argv[4];
-    std::cout << "Config file is " << conf_file << std::endl;
-
-    std::string of_file = argv[5];
-    std::cout << "Output file is " << of_file << std::endl;
-
-    std::string file_header = argv[6];
-    std::cout << "The header of the output file is " << file_header << std::endl;
-
-    std::string subscribe = argv[7];
-    std::cout << "The node you are subscribing is " << subscribe << std::endl;
-
+    float desired_value, min, max;
+    std::string conf_file, of_file, file_header, subscribe;
     std::vector <std::string> pub;
 
-    for (size_t i = 8; i < argc; i++)
+
+    try{
+        desired_value = atof(argv[1]);
+        std::cout << "Desired value is "<< desired_value << std::endl;
+
+        min = atof(argv[2]);
+        std::cout << "Minimum value is " << min << std::endl;
+
+        max = atof(argv[3]);
+        std::cout << "Maximum value is " << max << std::endl;
+
+        conf_file = argv[4];
+        std::cout << "Config file is " << conf_file << std::endl;
+
+        of_file = argv[5];
+        std::cout << "Output file is " << of_file << std::endl;
+
+        file_header = argv[6];
+        std::cout << "The header of the output file is " << file_header << std::endl;
+
+        subscribe = argv[7];
+        std::cout << "The node you are subscribing is " << subscribe << std::endl;
+
+        for (size_t i = 8; i < argc; i++)
+        {
+            pub.push_back(argv[i]);
+        }
+    }
+    catch(const std::exception& e)
     {
-      pub.push_back(argv[i]);
+        std::cerr << "Problem with the parameters :" << e.what() << std::endl;
+        exit(1);
     }
 
     PID fins = PID(n, desired_value, min, max,
-      conf_file, of_file, file_header, subscribe,
-      pub);
+            conf_file, of_file, file_header, subscribe,
+            pub);
 
     //SUBSCRIBER
     ros::Subscriber sub = n.subscribe(fins.get_subscribe(), 1000, chatterCallback);

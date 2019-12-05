@@ -10,16 +10,6 @@
 #include <sstream>
 #include <typeinfo>
 
-#include <stdio.h>  /* defines FILENAME_MAX */
-// #define WINDOWS  /* uncomment this line to use it for windows.*/
-#ifdef WINDOWS
-#include <direct.h>
-#define GetCurrentDir _getcwd
-#else
-#include <unistd.h>
-#define GetCurrentDir getcwd
-#endif
-
 class PID
 {
     public:
@@ -55,13 +45,8 @@ class PID
         void read_file(std::string filename, float& KP, float& KI, float& KD)
         {
             std::ifstream infile(filename);
-            char buff[FILENAME_MAX];
-            GetCurrentDir( buff, FILENAME_MAX );
-            std::string current_working_dir(buff);
-            ROS_INFO("Can't open the file %s", current_working_dir.c_str());
             if (!infile)
             {
-                //ROS_INFO(current_working_dir);
                 ROS_INFO("Can't open the file %s", filename.c_str());
                 exit(1);
             }
