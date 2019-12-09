@@ -18,6 +18,7 @@ int main(int argc, char **argv)
     std::vector <std::string> pub;
 
     try{
+        //Argument parsing
         desired_value = atof(argv[1]);
         std::cout << "Desired value is "<< desired_value << std::endl;
 
@@ -50,35 +51,36 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    PID fins = PID(n, desired_value, min, max,
+    PID pid = PID(n, desired_value, min, max,
             conf_file, of_file, file_header, subscribe,
             pub);
 
     //SUBSCRIBER
-    ros::Subscriber sub = n.subscribe(fins.get_subscribe(), 1000, chatterCallback);
+    ros::Subscriber sub = n.subscribe(pid.get_subscribe(), 1000, chatterCallback);
 
     ros::Rate loop_rate(10);
     float time = 0.0;
 
     while (ros::ok())
     {
-        fins.set_actual_value(pressure);
+        pid.set_actual_value(pressure);
 
-        fins.publish_file(time);
+        pid.publish_file(time);
 
         time += 0.01;
 
-        //CALCULATE ERROR
-        fins.PID_calcul();
+        //CALCULATE PID
+        pid.PID_calcul();
 
         //MSG AND PUBLISH
         uuv_gazebo_ros_plugins_msgs::FloatStamped msg; //Creation of msg
 
-        msg.data = fins.limit(); //If the angle is to big, reduce it
+        msg.data = pid.limit(); //If the angle is to big, reduce it
 
-        fins.publish(msg);
+        //Publish msg
+        pid.publish(msg);
 
-        fins.info();
+        pid.info();
 
         ros::spinOnce();
 

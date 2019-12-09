@@ -40,14 +40,12 @@ class PID
             std::cout << ", and KD = " << KD_ << std::endl;
         };
 
-        //TODO Destructor
-
         void read_file(std::string filename, float& KP, float& KI, float& KD)
         {
             std::ifstream infile(filename);
             if (!infile)
             {
-                ROS_INFO("Can't open the file %s", filename.c_str());
+                std::cerr << "Can't open the file " << filename.c_str() << std::endl;
                 exit(1);
             }
             infile >> KP >> KI >> KD;
@@ -60,10 +58,18 @@ class PID
 
         void PID_calcul()
         {
+            //Error
             error_ = desired_value_ - actual_value_;
+
+            //Calcul integral
             if (abs(error_) > 0.01)
                 integral_ += error_ * 0.01;
+
+            //Calcul derivative
             derivative_ = (error_ - error_prior_) / 0.01;
+
+
+            //Output
             output_ = KP_ * error_ + KI_ * integral_ + KD_ * derivative_;
             error_prior_ = error_;
         }
